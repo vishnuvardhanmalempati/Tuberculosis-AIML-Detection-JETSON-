@@ -1,0 +1,15 @@
+# Standard packages
+numpy
+pandas
+scikit-learn
+matplotlib
+seaborn
+opencv-python
+streamlit
+reportlab
+onnx
+onnxscript
+psutil
+
+# ONNX Runtime (CPU fallback - install onnxruntime-gpu for Jetson CUDA GPU acceleration)
+onnxruntime

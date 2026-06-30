@@ -1,0 +1,3 @@
+# Force LF line endings for shell scripts to prevent bash execution errors on Linux/Jetson Nano
+setup_jetson.sh text eol=lf
+*.sh text eol=lf
