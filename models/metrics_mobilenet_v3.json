@@ -1,0 +1,10 @@
+{
+    "model_name": "mobilenet_v3",
+    "test_loss": 0.4697115903808957,
+    "accuracy": 0.7619047619047619,
+    "precision": 1.0,
+    "sensitivity_recall": 0.4444444444444444,
+    "specificity": 1.0,
+    "f1_score": 0.6153846153846154,
+    "auc_roc": 0.9074074074074074
+}

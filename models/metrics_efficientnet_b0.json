@@ -1,0 +1,10 @@
+{
+    "model_name": "efficientnet_b0",
+    "test_loss": 0.5346862304778326,
+    "accuracy": 0.8571428571428571,
+    "precision": 0.8,
+    "sensitivity_recall": 0.8888888888888888,
+    "specificity": 0.8333333333333334,
+    "f1_score": 0.8421052631578947,
+    "auc_roc": 0.9351851851851852
+}
