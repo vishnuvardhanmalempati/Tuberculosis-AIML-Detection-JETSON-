@@ -6,65 +6,161 @@ import pandas as pd
 from PIL import Image
 import streamlit as st
 import torch
+from torchvision import transforms
 
 # Add root folder to path to allow absolute imports
 sys.path.append(str(Path(__file__).parent.parent))
 
 from src.data_loader import get_dataloaders
 from src.model import get_tuberculosis_model
-from src.explain import generate_and_save_gradcam, overlay_heatmap, get_gradcam_target_layer, GradCAM
-from src.database import init_db, add_patient, add_scan, get_all_scans, get_patient_scans, update_doctor_notes
+from src.explain import generate_and_save_gradcam
+from src.database import init_db, add_patient, add_scan, get_all_scans, update_doctor_notes
 from src.report_generator import generate_pdf_report
 from src.benchmark import run_benchmarks
 
 # Page Setup
 st.set_page_config(
-    page_title="Tuberculosis Medical AI Diagnostic Portal",
+    page_title="Tuberculosis Medical AI Workstation",
     page_icon="🫁",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom Styling (Rich Aesthetics)
+# Custom CSS for Human-Designed Professional Aesthetics
 st.markdown("""
 <style>
-    .reportview-container {
-        background: #F7FAFC;
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+    
+    /* Base font override */
+    html, body, [data-testid="stAppViewContainer"], .stWidgetFormContainer {
+        font-family: 'Outfit', sans-serif;
+        background-color: #F8FAFC;
     }
-    .main-title {
-        color: #1A365D;
-        font-family: 'Inter', sans-serif;
-        font-weight: 800;
-        margin-bottom: 2px;
-    }
-    .subtitle {
-        color: #4A5568;
-        font-size: 1.1rem;
+    
+    /* Top Masthead Header */
+    .masthead {
+        background: linear-gradient(135deg, #1E293B, #0F172A);
+        color: #F8FAFC;
+        padding: 30px;
+        border-radius: 16px;
         margin-bottom: 25px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        border: 1px solid #334155;
     }
-    .status-card {
-        padding: 20px;
-        border-radius: 10px;
+    
+    .masthead-title {
+        font-size: 2.2rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        margin: 0;
+        background: linear-gradient(to right, #38BDF8, #818CF8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .masthead-subtitle {
+        color: #94A3B8;
+        font-size: 1.05rem;
+        margin: 6px 0 0 0;
+        font-weight: 300;
+    }
+    
+    /* Card Container Wrapper */
+    .clinical-card {
+        background-color: #FFFFFF;
+        border-radius: 16px;
+        padding: 24px;
         margin-bottom: 20px;
-        border-left: 5px solid;
+        border: 1px solid #E2E8F0;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
     }
-    .status-positive {
-        background-color: #FED7D7;
-        color: #9B2C2C;
-        border-left-color: #E53E3E;
+    
+    .clinical-card h3 {
+        color: #0F172A;
+        font-weight: 600;
+        font-size: 1.25rem;
+        margin-top: 0;
+        margin-bottom: 16px;
+        border-bottom: 1px solid #F1F5F9;
+        padding-bottom: 10px;
     }
-    .status-negative {
-        background-color: #C6F6D5;
-        color: #22543D;
-        border-left-color: #38A169;
+    
+    /* Radiology Viewport Lightbox style */
+    .lightbox-title {
+        color: #94A3B8;
+        font-size: 0.8rem;
+        font-family: 'JetBrains Mono', monospace;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    /* Clinical Triage Banner */
+    .triage-card {
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        border-left: 6px solid;
+    }
+    
+    .triage-positive {
+        background: linear-gradient(to right, #FEF2F2, #FEE2E2);
+        color: #991B1B;
+        border-left-color: #EF4444;
+        border: 1px solid #FCA5A5;
+    }
+    
+    .triage-negative {
+        background: linear-gradient(to right, #F0FDF4, #DCFCE7);
+        color: #166534;
+        border-left-color: #22C55E;
+        border: 1px solid #86EFAC;
+    }
+    
+    .triage-card h4 {
+        margin: 0 0 6px 0;
+        font-weight: 700;
+        font-size: 1.3rem;
+    }
+    
+    .triage-card p {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 400;
+    }
+
+    /* Override standard tab styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+        background-color: #E2E8F0;
+        padding: 6px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        padding: 10px 24px;
+        border-radius: 8px;
+        background-color: transparent;
+        border: none;
+        color: #475569;
+        font-weight: 600;
+        transition: all 0.2s ease-in-out;
+    }
+    
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background-color: #FFFFFF;
+        color: #0F172A;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize database
+# Initialize database on startup
 init_db()
 
-# Cache model loader to speed up dashboard
+# Cached Model Loader
 @st.cache_resource
 def load_cached_model(model_name, weight_path=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -74,79 +170,105 @@ def load_cached_model(model_name, weight_path=None):
     model.eval()
     return model, device
 
-# --- SIDEBAR CONTROLS ---
+# --- SIDEBAR CONTROLS (TIGHT CONTROL SYSTEM) ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2870/2870638.png", width=80)
-    st.markdown("<h2 style='color: #1A365D; font-weight: 700;'>Clinical Control Panel</h2>", unsafe_allow_html=True)
-    
-    # Navigation
-    app_mode = st.radio(
-        "Navigation",
-        ["Diagnostic Portal", "Patient Database", "System Analytics & Benchmarks"]
-    )
+    st.markdown("<div style='text-align: center; margin-top: 15px;'><img src='https://cdn-icons-png.flaticon.com/512/2870/2870638.png' width='70'></div>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #1E293B; font-weight: 700; margin-bottom: 20px;'>Control Desk</h2>", unsafe_allow_html=True)
     
     st.divider()
     
-    # Model configuration
-    st.markdown("<h4 style='color: #2B6CB0;'>AI Configuration</h4>", unsafe_allow_html=True)
-    model_choice = st.selectbox("Model Architecture", ["mobilenet_v3", "efficientnet_b0"])
+    st.markdown("<h4 style='color: #2563EB; font-weight: 600;'>AI Engine Configuration</h4>", unsafe_allow_html=True)
+    model_choice = st.selectbox("Model Architecture", ["efficientnet_b0", "mobilenet_v3"])
     
-    # Find weight file in models directory
+    # Check for weights file
     model_weight_file = f"models/best_tb_model_{model_choice}.pth"
-    weight_status = "Pretrained (ImageNet Baseline)"
+    weight_status = "Baseline (Pretrained ImageNet)"
     weight_path = None
     
     if os.path.exists(model_weight_file):
-        weight_status = f"Trained Model Weights Loaded"
+        weight_status = "Trained Weights Loaded"
         weight_path = model_weight_file
-    st.info(f"Model State: **{weight_status}**")
+        st.success(f"✔️ {weight_status}")
+    else:
+        st.warning(f"⚠️ {weight_status}")
+        
+    st.divider()
     
-    # Threshold configuration
+    st.markdown("<h4 style='color: #2563EB; font-weight: 600;'>Decision Sensitivity</h4>", unsafe_allow_html=True)
     threshold = st.slider(
-        "Classification Decision Threshold", 
+        "Triage Threshold", 
         min_value=0.1, 
         max_value=0.9, 
         value=0.5, 
         step=0.05,
-        help="Adjusting this slider changes the sensitivity and specificity of the system. Lower threshold increases sensitivity (finds more cases), higher threshold increases specificity (avoids false alarms)."
+        help="Adjusting this changes the threshold for TB classification. Lower values increase screening sensitivity."
     )
+    
+    st.divider()
+    st.info("💡 **Clinical Tip:** Lower the threshold to `0.40` to catch early-stage consolidations, improving safety margins.")
 
-# Load selected model
+# Load the configured model
 model, device = load_cached_model(model_choice, weight_path)
 
-# --- MAIN APP LOGIC ---
+# --- TOP MASTHEAD ---
+st.markdown("""
+<div class="masthead">
+    <h1 class="masthead-title">🫁 Tuberculosis AI Medical Workstation</h1>
+    <p class="masthead-subtitle">Triage Diagnostic Portal & PACS Imaging Saliency Analyzer</p>
+</div>
+""", unsafe_allow_html=True)
 
-if app_mode == "Diagnostic Portal":
-    st.markdown("<h1 class='main-title'>🫁 Tuberculosis AI Diagnostic Portal</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='subtitle'>Production-grade clinical decision support system using chest radiography</p>", unsafe_allow_html=True)
+# --- WORKSPACE TABS (PACS Metaphor) ---
+diagnostic_tab, database_tab, analytics_tab = st.tabs([
+    "🔬 Diagnostic Workstation", 
+    "📂 Patient Registry & Archive", 
+    "📊 Performance Analytics"
+])
+
+# ==========================================
+# 🔬 TAB 1: DIAGNOSTIC WORKSTATION
+# ==========================================
+with diagnostic_tab:
+    col_input, col_view = st.columns([1, 1])
     
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.subheader("1. Patient Profile")
-        col_id, col_name = st.columns([1, 2])
-        with col_id:
+    with col_input:
+        st.markdown("""
+        <div class="clinical-card">
+            <h3>1. Patient Demographics & Intake</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Group inputs within a clean styled intake form
+        with st.container():
             patient_id = st.text_input("Patient ID*", value="P-" + datetime.datetime.now().strftime("%y%m%d%H%M"))
-        with col_name:
-            patient_name = st.text_input("Patient Full Name*", placeholder="e.g. John Doe")
+            patient_name = st.text_input("Full Name*", placeholder="Enter patient's name")
             
-        col_age, col_gen = st.columns(2)
-        with col_age:
-            patient_age = st.number_input("Age*", min_value=0, max_value=120, value=30)
-        with col_gen:
-            patient_gender = st.selectbox("Gender*", ["Male", "Female", "Other"])
-            
-        st.subheader("2. Upload Chest X-Ray")
-        uploaded_file = st.file_uploader("Select Frontal Chest Radiograph (CXR)...", type=["png", "jpg", "jpeg"])
+            col_a, col_b = st.columns(2)
+            with col_a:
+                patient_age = st.number_input("Age*", min_value=0, max_value=120, value=30)
+            with col_b:
+                patient_gender = st.selectbox("Gender*", ["Male", "Female", "Other"])
+                
+        st.markdown("""
+        <div class="clinical-card" style="margin-top: 15px;">
+            <h3>2. Acquire Chest Radiograph</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        uploaded_file = st.file_uploader("Upload Frontal Chest Radiograph (CXR)...", type=["png", "jpg", "jpeg"])
         
         if uploaded_file:
-            st.image(uploaded_file, caption="Uploaded Chest X-ray", use_container_width=True)
+            st.image(uploaded_file, caption="Acquired Scan Preview", use_container_width=True)
             
-    with col2:
-        st.subheader("3. AI Diagnostics & Findings")
+    with col_view:
+        st.markdown("""
+        <div class="clinical-card">
+            <h3>3. Diagnostic Interpretation & Triage</h3>
+        </div>
+        """, unsafe_allow_html=True)
         
         if uploaded_file and patient_name:
-            # Save uploaded file temporarily
+            # Setup directories
             temp_dir = Path("data/temp")
             temp_dir.mkdir(parents=True, exist_ok=True)
             temp_image_path = temp_dir / f"temp_{patient_id}.png"
@@ -154,14 +276,11 @@ if app_mode == "Diagnostic Portal":
             with open(temp_image_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
                 
-            run_diag = st.button("🔬 Run Automated AI Diagnostic", type="primary")
+            run_diag = st.button("🔬 Execute AI Screening & Visual Mapping", type="primary", use_container_width=True)
             
             if run_diag:
-                with st.spinner("Analyzing radiograph & generating saliency maps..."):
-                    # Step 1: Preprocess and run prediction
-                    from PIL import Image
-                    from torchvision import transforms
-                    
+                with st.spinner("Processing radiograph and computing saliency vectors..."):
+                    # Inference pipeline
                     img = Image.open(temp_image_path).convert('RGB')
                     preprocess = transforms.Compose([
                         transforms.Resize((224, 224)),
@@ -174,162 +293,176 @@ if app_mode == "Diagnostic Portal":
                         logits = model(input_tensor)
                         prob = torch.sigmoid(logits).item()
                         
-                    # Classification based on user threshold
                     predicted_label = "Tuberculosis" if prob >= threshold else "Normal"
                     
-                    # Step 2: Generate Grad-CAM image
+                    # Generate Grad-CAM Saliency Overlay
                     gradcam_save_path = temp_dir / f"gradcam_{patient_id}.png"
                     generate_and_save_gradcam(model, model_choice, temp_image_path, gradcam_save_path, device)
                     
-                    # Store session variables
-                    st.session_state['diagnosis_run'] = True
+                    # Store to session state to prevent state loss
+                    st.session_state['diag_run'] = True
                     st.session_state['prob'] = prob
                     st.session_state['label'] = predicted_label
                     st.session_state['temp_img'] = str(temp_image_path)
                     st.session_state['gradcam_img'] = str(gradcam_save_path)
-                    
-            if st.session_state.get('diagnosis_run'):
+                    st.session_state['doctor_notes'] = f"Radiographical features are {'suggestive of active Tuberculosis' if predicted_label == 'Tuberculosis' else 'within normal limits'}. Grad-CAM maps confirm region focus."
+            
+            if st.session_state.get('diag_run'):
                 prob = st.session_state['prob']
                 predicted_label = st.session_state['label']
                 temp_image_path = st.session_state['temp_img']
                 gradcam_save_path = st.session_state['gradcam_img']
                 
-                # Visual output card
+                # Clinical triage outcomes
                 if predicted_label == "Tuberculosis":
                     st.markdown(f"""
-                    <div class="status-card status-positive">
-                        <h3>⚠️ Tuberculosis Suspicion High</h3>
-                        <p>AI Screening indicates findings highly suggestive of Tuberculosis. Confidence: {prob*100:.1f}%</p>
+                    <div class="triage-card triage-positive">
+                        <h4>⚠️ Tuberculosis Suspicion: HIGH</h4>
+                        <p>Inference score: <strong>{prob*100:.1f}%</strong> (Decision threshold set at {threshold*100:.0f}%)</p>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
                     st.markdown(f"""
-                    <div class="status-card status-negative">
-                        <h3>✅ Screening Normal</h3>
-                        <p>No significant radiographic signs of active Tuberculosis detected. Confidence: {(1-prob)*100:.1f}%</p>
+                    <div class="triage-card triage-negative">
+                        <h4>✅ Screening Normal: CLEAR</h4>
+                        <p>Inference score: <strong>{(1-prob)*100:.1f}%</strong> confidence normal</p>
                     </div>
                     """, unsafe_allow_html=True)
-                    
-                st.progress(prob)
                 
-                # Show images side-by-side
-                st.subheader("Visual Explanations (Grad-CAM)")
+                # Side-by-Side PACS Lightbox Viewing
+                st.markdown("<p class='lightbox-title'>PACS Image Viewport</p>", unsafe_allow_html=True)
                 img_col1, img_col2 = st.columns(2)
                 with img_col1:
                     st.image(temp_image_path, caption="Original CXR", use_container_width=True)
                 with img_col2:
-                    st.image(gradcam_save_path, caption="AI Heatmap Overlay", use_container_width=True)
+                    st.image(gradcam_save_path, caption="Grad-CAM Saliency Overlay", use_container_width=True)
+                
+                st.divider()
+                
+                # Doctor Remarks Form
+                st.markdown("##### 🩺 Clinical Remarks & Database Sync")
+                doc_notes = st.text_area("Observations / Follow-up Plan", value=st.session_state['doctor_notes'])
+                
+                col_sync, col_pdf = st.columns(2)
+                with col_sync:
+                    if st.button("📝 Log Scan and Metadata", use_container_width=True):
+                        add_patient(patient_id, patient_name, patient_age, patient_gender)
+                        add_scan(patient_id, temp_image_path, prob, predicted_label, str(gradcam_save_path), doc_notes)
+                        st.success("Record synced with SQLite.")
+                        
+                with col_pdf:
+                    p_info = {"patient_id": patient_id, "name": patient_name, "age": patient_age, "gender": patient_gender}
+                    s_info = {
+                        "scan_date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "image_path": temp_image_path,
+                        "prediction_score": prob,
+                        "prediction_label": predicted_label,
+                        "gradcam_path": gradcam_save_path,
+                        "doctor_notes": doc_notes
+                    }
+                    pdf_report_path = f"data/reports/report_{patient_id}.pdf"
+                    generate_pdf_report(p_info, s_info, pdf_report_path)
                     
-                # Doctor notes & reporting
-                st.subheader("4. Clinical Report & Log")
-                doc_notes = st.text_area(
-                    "Clinical Remarks / Diagnosis Notes",
-                    value=f"Radiographical findings are {'suggestive of active Tuberculosis' if predicted_label == 'Tuberculosis' else 'normal with no active consolidations'}. Grad-CAM overlay confirms model focus areas."
-                )
-                
-                # Save scan to database
-                if st.button("📝 Log scan & findings to Database"):
-                    add_patient(patient_id, patient_name, patient_age, patient_gender)
-                    add_scan(patient_id, temp_image_path, prob, predicted_label, str(gradcam_save_path), doc_notes)
-                    st.success("Successfully registered patient scan record in SQLite DB.")
-                    
-                # Compile PDF Report
-                p_info = {"patient_id": patient_id, "name": patient_name, "age": patient_age, "gender": patient_gender}
-                s_info = {
-                    "scan_date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "image_path": temp_image_path,
-                    "prediction_score": prob,
-                    "prediction_label": predicted_label,
-                    "gradcam_path": gradcam_save_path,
-                    "doctor_notes": doc_notes
-                }
-                
-                pdf_report_path = f"data/reports/report_{patient_id}.pdf"
-                
-                # Compile report
-                generate_pdf_report(p_info, s_info, pdf_report_path)
-                
-                # Read file for download button
-                with open(pdf_report_path, "rb") as f:
-                    pdf_data = f.read()
-                    
-                st.download_button(
-                    label="📥 Download Clinical PDF Report",
-                    data=pdf_data,
-                    file_name=f"TB_Report_{patient_id}.pdf",
-                    mime="application/pdf"
-                )
+                    with open(pdf_report_path, "rb") as f:
+                        pdf_data = f.read()
+                    st.download_button(
+                        label="📥 Download Clinical PDF Report",
+                        data=pdf_data,
+                        file_name=f"TB_Report_{patient_id}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
         else:
-            st.warning("Please enter patient profile details and upload a chest radiograph to start diagnosis.")
+            st.warning("Please complete the patient demographics and upload a chest radiograph to activate the workstation.")
 
-elif app_mode == "Patient Database":
-    st.markdown("<h1 class='main-title'>📂 Patient Screening Records</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='subtitle'>Access, search, and manage registered patient diagnostics</p>", unsafe_allow_html=True)
+# ==========================================
+# 📂 TAB 2: PATIENT REGISTRY & ARCHIVE
+# ==========================================
+with database_tab:
+    st.markdown("""
+    <div class="clinical-card">
+        <h3>Patient Scan Registry</h3>
+    </div>
+    """, unsafe_allow_html=True)
     
     scans = get_all_scans()
     
     if len(scans) == 0:
-        st.info("No records found in the database. Use the Diagnostic Portal to scan and log cases.")
+        st.info("Registry is currently empty. Run scans in the Diagnostic Workstation to compile database records.")
     else:
         df = pd.DataFrame(scans)
         
-        # Search & Filter
-        search_query = st.text_input("🔍 Search by Patient ID or Name:")
+        # Registry Search Filter
+        search_query = st.text_input("🔍 Search registry by Patient Name or ID:")
         if search_query:
             df = df[df['patient_id'].str.contains(search_query, case=False) | df['name'].str.contains(search_query, case=False)]
             
-        # Format columns
         df_display = df[['scan_date', 'patient_id', 'name', 'age', 'gender', 'prediction_label', 'prediction_score']].copy()
         df_display['prediction_score'] = df_display['prediction_score'].map(lambda x: f"{x*100:.1f}%")
         
         st.dataframe(df_display, use_container_width=True)
         
-        # Detailed inspector
         st.divider()
-        st.subheader("🔍 Case Inspector")
-        selected_scan_id = st.selectbox("Select Scan ID to Inspect", df['id'].tolist(), format_func=lambda x: f"Scan #{x} - {df[df['id']==x]['name'].values[0]} ({df[df['id']==x]['patient_id'].values[0]})")
+        
+        # Clinical Archive Inspector
+        st.markdown("### 🔍 Case History Inspector")
+        selected_scan_id = st.selectbox(
+            "Select Registry ID to Inspect", 
+            df['id'].tolist(), 
+            format_func=lambda x: f"Scan #{x} - {df[df['id']==x]['name'].values[0]} ({df[df['id']==x]['patient_id'].values[0]})"
+        )
         
         if selected_scan_id:
             row = df[df['id'] == selected_scan_id].iloc[0]
             
-            det1, det2 = st.columns([1, 1])
-            with det1:
-                st.markdown(f"**Patient Name:** {row['name']} | **ID:** {row['patient_id']}")
-                st.markdown(f"**Age / Gender:** {row['age']} / {row['gender']}")
-                st.markdown(f"**Scan Date:** {row['scan_date']}")
-                st.markdown(f"**AI Score:** {row['prediction_score']*100:.1f}% ({row['prediction_label']})")
+            ins1, ins2 = st.columns([1, 1])
+            with ins1:
+                st.markdown(f"""
+                <div style='background-color: white; padding: 20px; border-radius: 12px; border: 1px solid #E2E8F0;'>
+                    <h5 style='margin-top: 0; color: #1E293B;'>Clinical Details</h5>
+                    <p><strong>Patient Name:</strong> {row['name']}</p>
+                    <p><strong>Patient ID:</strong> {row['patient_id']}</p>
+                    <p><strong>Demographics:</strong> {row['age']} yrs / {row['gender']}</p>
+                    <p><strong>Screening Date:</strong> {row['scan_date']}</p>
+                    <p><strong>Diagnostic Outcome:</strong> {row['prediction_label']} ({row['prediction_score']*100:.1f}%)</p>
+                </div>
+                """, unsafe_allow_html=True)
                 
-                # Update doctor notes
-                new_notes = st.text_area("Edit Diagnosis Notes:", value=row['doctor_notes'], key=f"notes_{selected_scan_id}")
-                if st.button("💾 Update Notes"):
-                    update_doctor_notes(selected_scan_id, new_notes)
-                    st.success("Notes updated successfully.")
-                    st.rerun()
+                st.markdown("<br>", unsafe_allow_html=True)
+                new_notes = st.text_area("Observations Log", value=row['doctor_notes'], key=f"notes_{selected_scan_id}")
+                
+                col_up, col_dn = st.columns(2)
+                with col_up:
+                    if st.button("💾 Update Notes Log", key=f"btn_up_{selected_scan_id}", use_container_width=True):
+                        update_doctor_notes(selected_scan_id, new_notes)
+                        st.success("Notes synchronized.")
+                        st.rerun()
+                        
+                with col_dn:
+                    p_info = {"patient_id": row['patient_id'], "name": row['name'], "age": row['age'], "gender": row['gender']}
+                    s_info = {
+                        "scan_date": row['scan_date'],
+                        "image_path": row['image_path'],
+                        "prediction_score": row['prediction_score'],
+                        "prediction_label": row['prediction_label'],
+                        "gradcam_path": row['gradcam_path'],
+                        "doctor_notes": new_notes
+                    }
+                    pdf_report_path = f"data/reports/report_{row['patient_id']}.pdf"
+                    generate_pdf_report(p_info, s_info, pdf_report_path)
                     
-                # Regenerate and Download PDF
-                p_info = {"patient_id": row['patient_id'], "name": row['name'], "age": row['age'], "gender": row['gender']}
-                s_info = {
-                    "scan_date": row['scan_date'],
-                    "image_path": row['image_path'],
-                    "prediction_score": row['prediction_score'],
-                    "prediction_label": row['prediction_label'],
-                    "gradcam_path": row['gradcam_path'],
-                    "doctor_notes": new_notes
-                }
-                pdf_report_path = f"data/reports/report_{row['patient_id']}.pdf"
-                generate_pdf_report(p_info, s_info, pdf_report_path)
-                
-                with open(pdf_report_path, "rb") as f:
-                    pdf_data = f.read()
-                st.download_button(
-                    label="📥 Download Updated PDF Report",
-                    data=pdf_data,
-                    file_name=f"TB_Report_{row['patient_id']}.pdf",
-                    mime="application/pdf"
-                )
-                
-            with det2:
-                # Show images
+                    with open(pdf_report_path, "rb") as f:
+                        pdf_data = f.read()
+                    st.download_button(
+                        label="📥 Download Updated PDF Report",
+                        data=pdf_data,
+                        file_name=f"TB_Report_{row['patient_id']}.pdf",
+                        mime="application/pdf",
+                        key=f"dl_pdf_{selected_scan_id}",
+                        use_container_width=True
+                    )
+                    
+            with ins2:
                 img_col_a, img_col_b = st.columns(2)
                 with img_col_a:
                     if os.path.exists(row['image_path']):
@@ -338,16 +471,15 @@ elif app_mode == "Patient Database":
                     if row['gradcam_path'] and os.path.exists(row['gradcam_path']):
                         st.image(row['gradcam_path'], caption="Grad-CAM Overlay", use_container_width=True)
 
-elif app_mode == "System Analytics & Benchmarks":
-    st.markdown("<h1 class='main-title'>📊 Model Performance & System Benchmarks</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='subtitle'>Clinical validation metrics and edge hardware benchmarking results</p>", unsafe_allow_html=True)
+# ==========================================
+# 📊 TAB 3: PERFORMANCE ANALYTICS
+# ==========================================
+with analytics_tab:
+    metrics_tab, bench_tab = st.tabs(["Clinical Validation Metrics", "Hardware Edge Benchmarking"])
     
-    metric_tab, bench_tab = st.tabs(["Clinical Validation Metrics", "Hardware Benchmarking"])
-    
-    with metric_tab:
-        st.subheader("Model Diagnostic Metrics")
+    with metrics_tab:
+        st.markdown("### Clinical Performance Analytics (Test Validation Set)")
         
-        # Load metrics json if exists
         metrics_file = f"models/metrics_{model_choice}.json"
         
         if os.path.exists(metrics_file):
@@ -356,13 +488,14 @@ elif app_mode == "System Analytics & Benchmarks":
                 metrics_data = json.load(f)
                 
             col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-            col_m1.metric("Test Accuracy", f"{metrics_data['accuracy']*100:.2f}%")
-            col_m2.metric("Sensitivity (Recall)", f"{metrics_data['sensitivity_recall']*100:.2f}%")
+            col_m1.metric("Validation Accuracy", f"{metrics_data['accuracy']*100:.2f}%")
+            col_m2.metric("Sensitivity / Recall (Safety)", f"{metrics_data['sensitivity_recall']*100:.2f}%")
             col_m3.metric("Specificity", f"{metrics_data['specificity']*100:.2f}%")
             col_m4.metric("AUC-ROC", f"{metrics_data['auc_roc']:.4f}")
             
-            # Show plots side by side
             st.divider()
+            
+            st.markdown("#### Validation Curves & Performance Plots")
             img_p1, img_p2, img_p3 = st.columns(3)
             
             hist_plot = f"models/training_history_{model_choice}.png"
@@ -382,15 +515,14 @@ elif app_mode == "System Analytics & Benchmarks":
             st.info("Metrics not found. Run model training (`main.py`) to generate validation curves and final test performance scores.")
             
     with bench_tab:
-        st.subheader("Inference Performance Comparison")
-        st.markdown("Run a live benchmark on the current server/edge device to measure model latency and throughput:")
+        st.markdown("### Live Hardware Benchmarking (Edge Performance)")
+        st.markdown("Execute live tests on this server/device to calculate execution latency and system resource requirements:")
         
-        # Search for ONNX model
         onnx_file = f"models/best_tb_model_{model_choice}.onnx"
-        onnx_status = "Available" if os.path.exists(onnx_file) else "Not Exported Yet"
+        onnx_status = "Available" if os.path.exists(onnx_file) else "Not Compiled"
         st.text(f"ONNX Model Status: {onnx_status}")
         
-        if st.button("🚀 Run Live Latency & Throughput Benchmark"):
+        if st.button("🚀 Run Live Latency & Memory Benchmark", use_container_width=True):
             with st.spinner("Measuring inference latency..."):
                 results = run_benchmarks(
                     pytorch_model=model,
