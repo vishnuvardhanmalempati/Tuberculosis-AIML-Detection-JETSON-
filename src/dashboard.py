@@ -34,33 +34,56 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
     
-    /* Global Background and Typography Overrides */
-    html, body, [data-testid="stAppViewContainer"], .stWidgetFormContainer {
-        background-color: #F2F9F8 !important; /* Soft clinical mint-cream background */
-        color: #1E293B !important; /* Slate gray text */
+    /* Base configuration and background */
+    html, body, [data-testid="stAppViewContainer"] {
+        background-color: #F2F9F8 !important;
         font-family: 'Outfit', sans-serif;
     }
     
-    /* Sidebar Overrides (Fortis Dark Teal accent) */
+    /* Force all text in the main viewport to be dark slate for readability on the light background */
+    [data-testid="stAppViewContainer"] label,
+    [data-testid="stAppViewContainer"] p,
+    [data-testid="stAppViewContainer"] span,
+    [data-testid="stAppViewContainer"] div,
+    [data-testid="stAppViewContainer"] li {
+        color: #1E293B !important;
+    }
+    
+    /* Masthead and brand styling overrides to prevent double-color rules */
+    .fortis-header h1, .fortis-header h1 span, .fortis-subtitle {
+        color: inherit !important;
+    }
+    .fortis-disclaimer, .fortis-disclaimer div {
+        color: #0A504E !important;
+    }
+    .triage-positive, .triage-positive h4, .triage-positive p {
+        color: #991B1B !important;
+    }
+    .triage-negative, .triage-negative h4, .triage-negative p {
+        color: #166534 !important;
+    }
+    
+    /* Sidebar Overrides (Dark Teal background, Light text) */
     [data-testid="stSidebar"] {
         background-color: #0A3C3A !important;
         border-right: 2px solid #005F5C;
     }
-    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2, 
-    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h4,
-    [data-testid="stSidebar"] label {
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h4 {
         color: #F8FAFC !important;
     }
     
-    /* Top Disclaimer Banner (Fortis warning/info style) */
+    /* Top Disclaimer Banner */
     .fortis-disclaimer {
         background-color: #E6F4F3;
         border: 1px solid #A2DDD8;
-        border-left: 6px solid #007E7A; /* Fortis Signature Teal */
+        border-left: 6px solid #007E7A;
         border-radius: 12px;
         padding: 16px 20px;
         margin-bottom: 24px;
-        color: #0A504E;
     }
     
     .disclaimer-title {
@@ -68,7 +91,6 @@ st.markdown("""
         font-size: 1rem;
         margin-top: 0;
         margin-bottom: 4px;
-        color: #007E7A;
         text-transform: uppercase;
         letter-spacing: 0.05em;
     }
@@ -83,7 +105,7 @@ st.markdown("""
     .fortis-header {
         background-color: #FFFFFF;
         border: 1px solid #E2E8F0;
-        border-top: 6px solid #007E7A; /* Top Brand Accent */
+        border-top: 6px solid #007E7A;
         border-radius: 16px;
         padding: 24px 30px;
         margin-bottom: 25px;
@@ -98,15 +120,15 @@ st.markdown("""
         font-weight: 700;
         letter-spacing: -0.02em;
         margin: 0;
-        color: #007E7A;
+        color: #007E7A !important;
     }
     
     .fortis-title-group h1 span {
-        color: #FF9E1B; /* Fortis Secondary Gold */
+        color: #FF9E1B !important;
     }
     
     .fortis-subtitle {
-        color: #475569;
+        color: #475569 !important;
         font-size: 0.95rem;
         margin: 4px 0 0 0;
         font-weight: 400;
@@ -125,7 +147,7 @@ st.markdown("""
     }
     
     .fortis-card h3 {
-        color: #007E7A;
+        color: #007E7A !important;
         font-weight: 700;
         font-size: 1.25rem;
         margin-top: 0;
@@ -145,7 +167,7 @@ st.markdown("""
     }
     
     .lightbox-tag {
-        color: #94A3B8;
+        color: #94A3B8 !important;
         font-size: 0.75rem;
         font-family: 'JetBrains Mono', monospace;
         margin-bottom: 8px;
@@ -162,15 +184,11 @@ st.markdown("""
     }
     
     .triage-positive {
-        background-color: #FEF2F2;
-        color: #991B1B;
         border-color: #FCA5A5;
         border-left: 6px solid #EF4444;
     }
     
     .triage-negative {
-        background-color: #F0FDF4;
-        color: #166534;
         border-color: #BBF7D0;
         border-left: 6px solid #10B981;
     }
@@ -199,7 +217,7 @@ st.markdown("""
     }
     
     .stButton > button:hover {
-        background-color: #FF9E1B !important; /* Gold on hover */
+        background-color: #FF9E1B !important;
         box-shadow: 0 4px 6px -1px rgba(255, 158, 27, 0.3) !important;
         transform: translateY(-1px);
     }
@@ -232,12 +250,12 @@ st.markdown("""
         font-family: 'JetBrains Mono', monospace;
         font-weight: 700;
         font-size: 1.3rem;
-        color: #007E7A;
+        color: #007E7A !important;
     }
     
     .metric-label {
         font-size: 0.8rem;
-        color: #64748B;
+        color: #64748B !important;
         text-transform: uppercase;
         margin-bottom: 4px;
         font-weight: 500;
@@ -264,7 +282,7 @@ st.markdown("""
     
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
         background-color: #FFFFFF;
-        color: #007E7A;
+        color: #007E7A !important;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
 </style>
