@@ -310,7 +310,7 @@ def validate_chest_xray(image_path):
     b, g, r = cv2.split(img)
     diff_rg = np.mean(np.abs(r.astype(np.int16) - g.astype(np.int16)))
     diff_gb = np.mean(np.abs(g.astype(np.int16) - b.astype(np.int16)))
-    if diff_rg > 15.0 or diff_gb > 15.0:
+    if diff_rg > 50.0 or diff_gb > 50.0:
         return False, "Image contains high color variance. Grayscale chest radiograph expected."
     return True, "Valid CXR format."
 
