@@ -21,122 +21,131 @@ from src.database import init_db, add_patient, add_scan, get_all_scans, update_d
 from src.report_generator import generate_pdf_report
 from src.benchmark import run_benchmarks
 
-# Page Configuration (PACS Viewport Layout)
+# Page Configuration (Wide Clinical Layout)
 st.set_page_config(
-    page_title="PACS Tuberculosis AI Workstation",
+    page_title="Fortis Tuberculosis AI Workstation",
     page_icon="🫁",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for the "Clinical Radiology" Lightbox Theme (Dark, High-Contrast Cyan/Amber Accent)
+# Custom CSS for the premium "Fortis Healthcare" Clinical Theme (Teal + Warm Gold)
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
     
-    /* Global App Container Override */
+    /* Global Background and Typography Overrides */
     html, body, [data-testid="stAppViewContainer"], .stWidgetFormContainer {
-        background-color: #0B0F19 !important;
-        color: #E2E8F0 !important;
+        background-color: #F2F9F8 !important; /* Soft clinical mint-cream background */
+        color: #1E293B !important; /* Slate gray text */
         font-family: 'Outfit', sans-serif;
     }
     
-    /* Sidebar Overrides */
+    /* Sidebar Overrides (Fortis Dark Teal accent) */
     [data-testid="stSidebar"] {
-        background-color: #111827 !important;
-        border-right: 1px solid #1F2937;
+        background-color: #0A3C3A !important;
+        border-right: 2px solid #005F5C;
+    }
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2, 
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h4,
+    [data-testid="stSidebar"] label {
+        color: #F8FAFC !important;
     }
     
-    /* Clinical Triage Disclaimer Header */
-    .clinical-disclaimer {
-        background: linear-gradient(135deg, #1E293B, #0F172A);
-        border: 1px solid #3B82F6;
-        border-left: 6px solid #3B82F6;
+    /* Top Disclaimer Banner (Fortis warning/info style) */
+    .fortis-disclaimer {
+        background-color: #E6F4F3;
+        border: 1px solid #A2DDD8;
+        border-left: 6px solid #007E7A; /* Fortis Signature Teal */
         border-radius: 12px;
         padding: 16px 20px;
         margin-bottom: 24px;
-        color: #93C5FD;
+        color: #0A504E;
     }
     
     .disclaimer-title {
         font-weight: 700;
-        font-size: 1.05rem;
+        font-size: 1rem;
         margin-top: 0;
         margin-bottom: 4px;
-        color: #60A5FA;
-        letter-spacing: 0.05em;
+        color: #007E7A;
         text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
     
     .disclaimer-text {
         font-size: 0.9rem;
-        line-height: 1.4;
+        line-height: 1.45;
         margin: 0;
     }
     
-    /* PACS Workstation Title Block */
-    .pacs-title-block {
-        background: #111827;
-        border: 1px solid #1F2937;
+    /* Fortis Corporate Masthead */
+    .fortis-header {
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-top: 6px solid #007E7A; /* Top Brand Accent */
         border-radius: 16px;
         padding: 24px 30px;
         margin-bottom: 25px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
     }
     
-    .pacs-title {
+    .fortis-title-group h1 {
         font-size: 2.1rem;
         font-weight: 700;
-        letter-spacing: -0.03em;
+        letter-spacing: -0.02em;
         margin: 0;
-        color: #F8FAFC;
+        color: #007E7A;
     }
     
-    .pacs-title span {
-        color: #06B6D4; /* Diagnostic Cyan */
+    .fortis-title-group h1 span {
+        color: #FF9E1B; /* Fortis Secondary Gold */
     }
     
-    .pacs-subtitle {
-        color: #9CA3AF;
-        font-size: 1rem;
+    .fortis-subtitle {
+        color: #475569;
+        font-size: 0.95rem;
         margin: 4px 0 0 0;
-        font-weight: 300;
-        font-family: 'JetBrains Mono', monospace;
+        font-weight: 400;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
     
-    /* Radiology Diagnostic Card */
-    .radiology-card {
-        background-color: #111827;
+    /* Clean Hospital Card Containers */
+    .fortis-card {
+        background-color: #FFFFFF;
         border-radius: 16px;
         padding: 24px;
         margin-bottom: 20px;
-        border: 1px solid #1F2937;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        border: 1px solid #E2E8F0;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.02), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
     }
     
-    .radiology-card h3 {
-        color: #F8FAFC;
-        font-weight: 600;
-        font-size: 1.2rem;
+    .fortis-card h3 {
+        color: #007E7A;
+        font-weight: 700;
+        font-size: 1.25rem;
         margin-top: 0;
-        margin-bottom: 16px;
-        border-bottom: 1px solid #1F2937;
-        padding-bottom: 10px;
-        letter-spacing: 0.02em;
+        margin-bottom: 18px;
+        border-left: 4px solid #FF9E1B;
+        padding-left: 12px;
     }
     
-    /* Diagnostic Lightbox viewport */
-    .lightbox-viewport {
-        background-color: #030712;
-        border: 3px solid #1F2937;
+    /* Radiology Lightbox frame */
+    .radiology-viewport {
+        background-color: #0F172A;
+        border: 2px solid #334155;
         border-radius: 12px;
         padding: 16px;
-        box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8);
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
         text-align: center;
     }
     
     .lightbox-tag {
-        color: #6B7280;
+        color: #94A3B8;
         font-size: 0.75rem;
         font-family: 'JetBrains Mono', monospace;
         margin-bottom: 8px;
@@ -144,56 +153,103 @@ st.markdown("""
         letter-spacing: 0.1em;
     }
     
-    /* Clinical Risk Banners */
-    .risk-banner {
+    /* Fortis Clinical Decision Alerts */
+    .triage-card {
         border-radius: 12px;
         padding: 20px;
         margin-bottom: 24px;
         border: 1px solid;
     }
     
-    .risk-positive {
-        background: linear-gradient(135deg, #7F1D1D, #450A0A);
-        color: #FCA5A5;
-        border-color: #EF4444;
+    .triage-positive {
+        background-color: #FEF2F2;
+        color: #991B1B;
+        border-color: #FCA5A5;
         border-left: 6px solid #EF4444;
     }
     
-    .risk-negative {
-        background: linear-gradient(135deg, #064E3B, #022C22);
-        color: #A7F3D0;
-        border-color: #10B981;
+    .triage-negative {
+        background-color: #F0FDF4;
+        color: #166534;
+        border-color: #BBF7D0;
         border-left: 6px solid #10B981;
     }
     
-    .risk-banner h4 {
+    .triage-card h4 {
         margin: 0 0 6px 0;
         font-weight: 700;
-        font-size: 1.25rem;
-        letter-spacing: 0.02em;
+        font-size: 1.2rem;
     }
     
-    .risk-banner p {
+    .triage-card p {
         margin: 0;
         font-size: 0.95rem;
     }
     
-    /* Monospaced Metrics display */
-    .diagnostic-val {
-        font-family: 'JetBrains Mono', monospace;
-        font-weight: 700;
-        font-size: 1.4rem;
-        color: #06B6D4;
+    /* Rounded Action Buttons and Inputs */
+    .stButton > button {
+        background-color: #007E7A !important;
+        color: #FFFFFF !important;
+        border-radius: 24px !important;
+        border: none !important;
+        font-weight: 600 !important;
+        padding: 10px 24px !important;
+        transition: all 0.2s ease-in-out !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 126, 122, 0.2) !important;
     }
     
-    /* Override standard tab styling for Radiology theme */
+    .stButton > button:hover {
+        background-color: #FF9E1B !important; /* Gold on hover */
+        box-shadow: 0 4px 6px -1px rgba(255, 158, 27, 0.3) !important;
+        transform: translateY(-1px);
+    }
+    
+    .stDownloadButton > button {
+        background-color: #007E7A !important;
+        color: #FFFFFF !important;
+        border-radius: 24px !important;
+        border: none !important;
+        font-weight: 600 !important;
+        padding: 10px 24px !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+    
+    .stDownloadButton > button:hover {
+        background-color: #FF9E1B !important;
+        transform: translateY(-1px);
+    }
+    
+    /* Metrics display */
+    .metric-container {
+        background-color: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        padding: 12px 18px;
+        text-align: center;
+    }
+    
+    .metric-value {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+        font-size: 1.3rem;
+        color: #007E7A;
+    }
+    
+    .metric-label {
+        font-size: 0.8rem;
+        color: #64748B;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+        font-weight: 500;
+    }
+
+    /* Tab Custom Styling */
     .stTabs [data-baseweb="tab-list"] {
         gap: 12px;
-        background-color: #111827;
+        background-color: #E2E8F0;
         padding: 6px;
         border-radius: 12px;
         margin-bottom: 20px;
-        border: 1px solid #1F2937;
     }
     
     .stTabs [data-baseweb="tab"] {
@@ -201,15 +257,15 @@ st.markdown("""
         border-radius: 8px;
         background-color: transparent;
         border: none;
-        color: #9CA3AF;
+        color: #475569;
         font-weight: 600;
         transition: all 0.2s ease-in-out;
     }
     
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background-color: #1F2937;
-        color: #06B6D4;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        background-color: #FFFFFF;
+        color: #007E7A;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -217,12 +273,8 @@ st.markdown("""
 # Initialize database registry
 init_db()
 
-# Clinical Preprocessing Helpers
+# Preprocessing Functions
 def apply_clahe_enhancement(image_path, save_path):
-    """
-    Applies Contrast Limited Adaptive Histogram Equalization (CLAHE)
-    to enhance X-ray image contrast (standard clinical practice).
-    """
     img_gray = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     cl_img = clahe.apply(img_gray)
@@ -230,32 +282,21 @@ def apply_clahe_enhancement(image_path, save_path):
     cv2.imwrite(str(save_path), cl_rgb)
 
 def validate_chest_xray(image_path):
-    """
-    Performs lightweight structural check on the image to verify 
-    if it matches standard grayscale chest radiograph characteristics.
-    """
     img = cv2.imread(str(image_path))
     if img is None:
         return False, "Unable to read image file."
-        
     h, w, c = img.shape
     aspect_ratio = w / h
-    
-    # 1. Check aspect ratio (CXR PA views are typically square/vertical: aspect ratio between 0.65 and 1.35)
     if aspect_ratio < 0.60 or aspect_ratio > 1.40:
-        return False, f"Aspect ratio ({aspect_ratio:.2f}) does not match standard PA chest radiograph structure."
-        
-    # 2. Check channel color uniformity (X-rays are grayscale, meaning R, G, B channels should have minimal variance)
+        return False, f"Aspect ratio ({aspect_ratio:.2f}) does not match PA chest radiograph structure."
     b, g, r = cv2.split(img)
     diff_rg = np.mean(np.abs(r.astype(np.int16) - g.astype(np.int16)))
     diff_gb = np.mean(np.abs(g.astype(np.int16) - b.astype(np.int16)))
-    
     if diff_rg > 15.0 or diff_gb > 15.0:
         return False, "Image contains high color variance. Grayscale chest radiograph expected."
-        
     return True, "Valid CXR format."
 
-# Cached Model Loader
+# Model Loader
 @st.cache_resource
 def load_cached_model(model_name, weight_path=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -268,15 +309,15 @@ def load_cached_model(model_name, weight_path=None):
 # --- SIDEBAR CONTROL DESK ---
 with st.sidebar:
     st.markdown("<div style='text-align: center; margin-top: 15px;'><img src='https://cdn-icons-png.flaticon.com/512/2870/2870638.png' width='70'></div>", unsafe_allow_html=True)
-    st.markdown("<h2 style='text-align: center; color: #F8FAFC; font-weight: 700; margin-bottom: 20px;'>Control Desk</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; font-weight: 700; margin-bottom: 20px;'>Control Desk</h2>", unsafe_allow_html=True)
     
     st.divider()
     
-    st.markdown("<h4 style='color: #06B6D4; font-weight: 600;'>AI Engine Configuration</h4>", unsafe_allow_html=True)
+    st.markdown("<h4>AI Engine Configuration</h4>", unsafe_allow_html=True)
     model_choice = st.selectbox("Model Architecture", ["efficientnet_b0", "mobilenet_v3"])
     
     model_weight_file = f"models/best_tb_model_{model_choice}.pth"
-    weight_status = "Baseline (Pretrained ImageNet)"
+    weight_status = "Baseline (Pretrained)"
     weight_path = None
     
     if os.path.exists(model_weight_file):
@@ -288,7 +329,7 @@ with st.sidebar:
         
     st.divider()
     
-    st.markdown("<h4 style='color: #06B6D4; font-weight: 600;'>Triage Threshold</h4>", unsafe_allow_html=True)
+    st.markdown("<h4>Triage Threshold</h4>", unsafe_allow_html=True)
     threshold = st.slider(
         "Triage Cutoff", 
         min_value=0.1, 
@@ -299,14 +340,14 @@ with st.sidebar:
     )
     
     st.divider()
-    st.info("💡 **Clinical Tip:** Set cutoff to `0.40` or `0.45` to optimize screening sensitivity and prevent false negatives.")
+    st.info("💡 **Clinical Tip:** Lower the cutoff to `0.40` or `0.45` to optimize screening sensitivity and prevent false negatives.")
 
 # Load the configured model
 model, device = load_cached_model(model_choice, weight_path)
 
 # --- 1. CLINICAL DISCLAIMER (HONEST FRAMING) ---
 st.markdown("""
-<div class="clinical-disclaimer">
+<div class="fortis-disclaimer">
     <div class="disclaimer-title">🏥 Clinical Decision Support Tool</div>
     <div class="disclaimer-text">
         This portal acts as a screening triage assistant for clinicians. It does not replace clinical evaluation or microbiological confirmation (e.g., GeneXpert molecular testing or sputum culture). All AI predictions and saliency mappings must be reviewed by a certified medical professional.
@@ -314,15 +355,21 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# --- 2. PAC MASTHEAD TITLE ---
+# --- 2. FORTIS CORPORATE MASTHEAD ---
 st.markdown("""
-<div class="pacs-title-block">
-    <h1 class="pacs-title">PACS <span>Tuberculosis AI Workstation</span></h1>
-    <p class="pacs-subtitle">System Version: 2.1-Edge // Engine Device: {}</p>
+<div class="fortis-header">
+    <div class="fortis-title-group">
+        <h1>Fortis <span>Clinical AI Portal</span></h1>
+        <p class="fortis-subtitle">Tuberculosis Screening and Decision Support Workstation</p>
+    </div>
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: #475569; text-align: right; line-height: 1.4;">
+        System Version: 2.2-Fortis<br>
+        Engine Device: {}
+    </div>
 </div>
 """.format("NVIDIA GPU (CUDA)" if torch.cuda.is_available() else "Cortex-A57 CPU"), unsafe_allow_html=True)
 
-# --- 3. PACS TABS ---
+# --- 3. WORKSPACE TABS ---
 diag_tab, db_tab, metric_tab, edu_tab = st.tabs([
     "🔬 Diagnostic Workstation",
     "📂 Patient Archive & Registry",
@@ -338,7 +385,7 @@ with diag_tab:
     
     with col_left:
         # Patient Demographic Intake Card
-        st.markdown("<div class='radiology-card'><h3>1. Patient Demographics & Registry</h3></div>", unsafe_allow_html=True)
+        st.markdown("<div class='fortis-card'><h3>1. Patient Demographics & Registry</h3></div>", unsafe_allow_html=True)
         patient_id = st.text_input("Patient ID*", value="P-" + datetime.datetime.now().strftime("%y%m%d%H%M"))
         patient_name = st.text_input("Full Name*", placeholder="e.g. Jane Doe")
         
@@ -349,8 +396,8 @@ with diag_tab:
             patient_gender = st.selectbox("Gender*", ["Male", "Female", "Other"])
             
         # Symptom Questionnaire Card
-        st.markdown("<div class='radiology-card' style='margin-top: 15px;'><h3>2. Clinical Symptom Questionnaire</h3></div>", unsafe_allow_html=True)
-        st.markdown("<p style='color: #9CA3AF; font-size: 0.9rem; margin-bottom: 15px;'>Toggle patient symptoms to calculate overall combined clinical risk profile:</p>", unsafe_allow_html=True)
+        st.markdown("<div class='fortis-card' style='margin-top: 15px;'><h3>2. Clinical Symptom Questionnaire</h3></div>", unsafe_allow_html=True)
+        st.markdown("<p style='color: #475569; font-size: 0.9rem; margin-bottom: 15px;'>Toggle patient symptoms to calculate overall combined clinical risk profile:</p>", unsafe_allow_html=True)
         
         s_cough = st.checkbox("Persistent Cough (> 2 weeks)")
         s_sputum = st.checkbox("Hemoptysis (Blood in Sputum)")
@@ -359,11 +406,11 @@ with diag_tab:
         s_fever = st.checkbox("Fever / Chills")
         
         # Radiograph Upload Card
-        st.markdown("<div class='radiology-card' style='margin-top: 15px;'><h3>3. Acquire Chest Radiograph</h3></div>", unsafe_allow_html=True)
+        st.markdown("<div class='fortis-card' style='margin-top: 15px;'><h3>3. Acquire Chest Radiograph</h3></div>", unsafe_allow_html=True)
         uploaded_file = st.file_uploader("Select Chest X-ray (PA View)...", type=["png", "jpg", "jpeg"])
         
     with col_right:
-        st.markdown("<div class='radiology-card'><h3>4. Diagnostic Interpretation & PACS Viewer</h3></div>", unsafe_allow_html=True)
+        st.markdown("<div class='fortis-card'><h3>4. Diagnostic Interpretation & PACS Viewer</h3></div>", unsafe_allow_html=True)
         
         if uploaded_file and patient_name:
             # Save uploaded file
@@ -431,33 +478,48 @@ with diag_tab:
                     # Display Diagnostic Risk Banner
                     if predicted_label == "Tuberculosis":
                         st.markdown(f"""
-                        <div class="risk-banner risk-positive">
+                        <div class="triage-card triage-positive">
                             <h4>⚠️ Tuberculosis Suspicion: HIGH</h4>
-                            <p>Combined Risk Score is <strong>{combined_score*100:.1f}%</strong> (Cutoff threshold set at {threshold*100:.0f}%)</p>
+                            <p>Combined Clinical Risk is <strong>{combined_score*100:.1f}%</strong> (Cutoff threshold set at {threshold*100:.0f}%)</p>
                         </div>
                         """, unsafe_allow_html=True)
                     else:
                         st.markdown(f"""
-                        <div class="risk-banner risk-negative">
+                        <div class="triage-card triage-negative">
                             <h4>✅ Screening Outcome: Normal / Low Risk</h4>
-                            <p>Combined Risk Score is <strong>{combined_score*100:.1f}%</strong>. Active Tuberculosis characteristics not prominent.</p>
+                            <p>Combined Clinical Risk is <strong>{combined_score*100:.1f}%</strong>. Active Tuberculosis characteristics not prominent.</p>
                         </div>
                         """, unsafe_allow_html=True)
                         
                     # Detailed Metrics Readouts
                     col_m1, col_m2, col_m3 = st.columns(3)
                     with col_m1:
-                        st.markdown(f"AI Model Score:<br><span class='diagnostic-val'>{prob*100:.1f}%</span>", unsafe_allow_html=True)
+                        st.markdown(f"""
+                        <div class="metric-container">
+                            <div class="metric-label">AI Model Risk</div>
+                            <div class="metric-value">{prob*100:.1f}%</div>
+                        </div>
+                        """, unsafe_allow_html=True)
                     with col_m2:
-                        st.markdown(f"Symptom Score:<br><span class='diagnostic-val'>{prob_symptoms*100:.1f}%</span>", unsafe_allow_html=True)
+                        st.markdown(f"""
+                        <div class="metric-container">
+                            <div class="metric-label">Symptom Index</div>
+                            <div class="metric-value">{prob_symptoms*100:.1f}%</div>
+                        </div>
+                        """, unsafe_allow_html=True)
                     with col_m3:
-                        st.markdown(f"Combined Score:<br><span class='diagnostic-val'>{combined_score*100:.1f}%</span>", unsafe_allow_html=True)
+                        st.markdown(f"""
+                        <div class="metric-container">
+                            <div class="metric-label">Combined Score</div>
+                            <div class="metric-value">{combined_score*100:.1f}%</div>
+                        </div>
+                        """, unsafe_allow_html=True)
                     
                     st.divider()
                     
                     # Signature Interaction: Interactive Visual Saliency Blender Slider
                     st.markdown("##### 🎛️ Visual Saliency Blender")
-                    alpha = st.slider("Alpha Blend Control (CLAHE Scan vs Grad-CAM Heatmap)", 0.0, 1.0, 0.5, step=0.05)
+                    alpha = st.slider("Alpha Blend Control (CXR Scan vs Grad-CAM Heatmap)", 0.0, 1.0, 0.5, step=0.05)
                     
                     # Compute Blended Image dynamically
                     img_enhanced = cv2.imread(enhanced_img_path)
@@ -468,8 +530,8 @@ with diag_tab:
                     blended_rgb = cv2.cvtColor(blended_img, cv2.COLOR_BGR2RGB)
                     
                     # Display in radiology dark viewport
-                    st.markdown("<div class='lightbox-viewport'>", unsafe_allow_html=True)
-                    st.markdown("<p class='lightbox-tag'>Active Triage Lightbox Viewport</p>", unsafe_allow_html=True)
+                    st.markdown("<div class='radiology-viewport'>", unsafe_allow_html=True)
+                    st.markdown("<p class='lightbox-tag'>PACS Active Workstation Viewport</p>", unsafe_allow_html=True)
                     st.image(blended_rgb, use_container_width=True)
                     st.markdown("</div>", unsafe_allow_html=True)
                     
@@ -483,7 +545,7 @@ with diag_tab:
                         if st.button("📝 Log Scan and Findings", use_container_width=True):
                             add_patient(patient_id, patient_name, patient_age, patient_gender)
                             add_scan(patient_id, enhanced_img_path, combined_score, predicted_label, str(gradcam_img_path), doc_notes)
-                            st.success("Synchronized with Database.")
+                            st.success("Record logged successfully in SQLite Registry.")
                             
                     with col_pdf:
                         p_info = {"patient_id": patient_id, "name": patient_name, "age": patient_age, "gender": patient_gender}
@@ -514,7 +576,7 @@ with diag_tab:
 # 📂 TAB 2: PATIENT ARCHIVE & REGISTRY
 # ==========================================
 with db_tab:
-    st.markdown("<div class='radiology-card'><h3>Clinical Patients Archive</h3></div>", unsafe_allow_html=True)
+    st.markdown("<div class='fortis-card'><h3>Clinical Patients Archive</h3></div>", unsafe_allow_html=True)
     scans = get_all_scans()
     
     if len(scans) == 0:
@@ -545,8 +607,8 @@ with db_tab:
             ins1, ins2 = st.columns([1, 1])
             with ins1:
                 st.markdown(f"""
-                <div style='background-color: #111827; padding: 20px; border-radius: 12px; border: 1px solid #1F2937;'>
-                    <h5 style='margin-top: 0; color: #06B6D4;'>Demographic Details</h5>
+                <div style='background-color: #FFFFFF; padding: 20px; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);'>
+                    <h5 style='margin-top: 0; color: #007E7A; font-weight: 700;'>Patient Details</h5>
                     <p><strong>Name:</strong> {row['name']} | <strong>ID:</strong> {row['patient_id']}</p>
                     <p><strong>Demographics:</strong> {row['age']} yrs / {row['gender']}</p>
                     <p><strong>Scan Date:</strong> {row['scan_date']}</p>
@@ -671,7 +733,7 @@ with metric_tab:
 # 📖 TAB 4: CLINICAL EDUCATION & RESOURCES
 # ==========================================
 with edu_tab:
-    st.markdown("<div class='radiology-card'><h3>Clinical Information & Diagnostic Resources</h3></div>", unsafe_allow_html=True)
+    st.markdown("<div class='fortis-card'><h3>Clinical Information & Diagnostic Resources</h3></div>", unsafe_allow_html=True)
     
     col_edu1, col_edu2 = st.columns(2)
     with col_edu1:
